@@ -98,7 +98,7 @@ export default function App() {
       }
     } catch (err: any) {
       console.error(err);
-      showStatus("Erro de rede ao salvar foto.", true);
+      showStatus(`Erro de rede ao salvar foto: ${err.message || "Verifique sua conexão."}`, true);
     }
   };
 

@@ -152,10 +152,10 @@ export default function CameraView({ onPhotoCaptured }: CameraViewProps) {
       const video = videoRef.current;
       const canvas = document.createElement("canvas");
       
-      // Scale down high-resolution images slightly to ensure fast and reliable network transmission while maintaining great clarity
+      // Scale down image dimensions to guarantee fast network transmission and comply with proxy size limits, while keeping excellent clarity on mobile/PC screens
       let targetWidth = video.videoWidth || 640;
       let targetHeight = video.videoHeight || 480;
-      const MAX_DIMENSION = 1024;
+      const MAX_DIMENSION = 800;
       
       if (targetWidth > MAX_DIMENSION || targetHeight > MAX_DIMENSION) {
         if (targetWidth > targetHeight) {
@@ -179,8 +179,8 @@ export default function CameraView({ onPhotoCaptured }: CameraViewProps) {
         }
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         
-        // Use 0.8 quality instead of 0.9 (virtually identical visually, but generates vastly smaller files)
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.80);
+        // Use 0.65 quality (visually indistinguishable on small screens, under 50KB to prevent network timeouts)
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.65);
         onPhotoCaptured({ dataUrl });
       }
     } catch (err) {

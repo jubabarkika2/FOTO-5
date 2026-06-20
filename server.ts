@@ -83,15 +83,25 @@ app.post("/api/photos", async (req, res) => {
       return res.status(400).json({ success: false, error: "Invalid base64 format" });
     }
 
+    const mimeType = matches[1]; // e.g. 'image/jpeg' or 'video/webm'
+    let ext = "jpg";
+    const isVideo = mimeType.startsWith("video/");
+    if (isVideo) {
+      if (mimeType.includes("mp4")) ext = "mp4";
+      else if (mimeType.includes("webm")) ext = "webm";
+      else ext = "webm";
+    }
+
     const imageBuffer = Buffer.from(matches[2], "base64");
     const photoId = "photo_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
-    const fileName = `${photoId}.jpg`;
+    const fileName = `${photoId}.${ext}`;
     const filePath = path.join(PHOTOS_DIR, fileName);
 
     await fs.writeFile(filePath, imageBuffer);
 
     const now = new Date().toISOString();
-    const photoName = name || `Foto_${new Date().toLocaleDateString("pt-BR").replace(/\//g, "-")}_${new Date().toLocaleTimeString("pt-BR").replace(/:/g, "-")}`;
+    const defaultPrefix = isVideo ? "Vídeo" : "Foto";
+    const photoName = name || `${defaultPrefix}_${new Date().toLocaleDateString("pt-BR").replace(/\//g, "-")}_${new Date().toLocaleTimeString("pt-BR").replace(/:/g, "-")}`;
     const fileSize = imageBuffer.length;
 
     const newPhoto = {
@@ -214,16 +224,20 @@ app.post("/api/email/send", async (req, res) => {
     // 2. Create transporter
     const transporter = nodemailer.createTransport(transporterConfig);
 
+    const isVideoFile = photo.fileName.endsWith(".webm") || photo.fileName.endsWith(".mp4");
+    const assetTypeLabel = isVideoFile ? "Vídeo" : "Foto";
+    const attachmentExt = path.extname(photo.fileName) || ".jpg";
+
     const mailOptions = {
       from: customSmtp?.senderName 
         ? `"${customSmtp.senderName}" <${transporterConfig.auth.user}>` 
         : `"${process.env.SENDER_NAME || "Galeria de Fotos"}" <${transporterConfig.auth.user}>`,
       to: recipientEmail,
-      subject: subject || `Sua Foto - ${photo.name}`,
-      text: textMessage || `Olá!\n\nSegue em anexo a foto tirada e enviada através do nosso aplicativo de Câmera.\n\nDetalhes da foto:\n- Nome: ${photo.name}\n- Data: ${new Date(photo.createdAt).toLocaleString("pt-BR")}\n- ID: ${photo.id}\n\nAproveite!`,
+      subject: subject || `Sua Captura (${assetTypeLabel}) - ${photo.name}`,
+      text: textMessage || `Olá!\n\nSegue em anexo a captura (${assetTypeLabel.toLowerCase()}) tirada e enviada através do nosso aplicativo.\n\nDetalhes da captura:\n- Nome: ${photo.name}\n- Data: ${new Date(photo.createdAt).toLocaleString("pt-BR")}\n- ID: ${photo.id}\n\nAproveite!`,
       attachments: [
         {
-          filename: photo.name.endsWith(".jpg") ? photo.name : `${photo.name}.jpg`,
+          filename: photo.name.includes(".") ? photo.name : `${photo.name}${attachmentExt}`,
           path: photoPath,
         },
       ],

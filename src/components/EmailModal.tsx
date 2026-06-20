@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Mail, Settings, History, Info, HelpCircle, Loader2, CheckCircle, AlertCircle, Eye, EyeOff, X } from "lucide-react";
+import { Mail, Settings, History, Info, HelpCircle, Loader2, CheckCircle, AlertCircle, Eye, EyeOff, X, Video } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Photo, SMTPSettings, EmailLog } from "../types";
 
@@ -252,17 +252,35 @@ export default function EmailModal({ photo, onClose }: EmailModalProps) {
           {/* TAB 1: COMPOSE AND SEND */}
           {activeTab === "send" && (
             <form onSubmit={handleSendEmail} className="space-y-4">
-              {photo && (
-                <div className="p-3 bg-zinc-950 rounded-2xl border border-zinc-800 flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-lg overflow-hidden bg-black border border-zinc-800">
-                    <img src={photo.dataUrl} alt="Attachments Preview" className="h-full w-full object-cover" />
+              {photo && (() => {
+                const isVideo = !!(
+                  photo.fileName?.endsWith(".webm") ||
+                  photo.fileName?.endsWith(".mp4") ||
+                  photo.dataUrl?.includes("video") ||
+                  photo.name?.toLowerCase().includes("vídeo") ||
+                  photo.name?.toLowerCase().includes("video")
+                );
+                return (
+                  <div className="p-3 bg-zinc-950 rounded-2xl border border-zinc-800 flex items-center gap-3">
+                    <div className="h-12 w-12 rounded-lg overflow-hidden bg-black border border-zinc-800 flex items-center justify-center">
+                      {isVideo ? (
+                        <div className="relative w-full h-full flex items-center justify-center">
+                          <video src={photo.dataUrl} className="w-full h-full object-cover opacity-60" muted playsInline />
+                          <div className="absolute inset-0 flex items-center justify-center text-red-500">
+                            <Video className="w-4 h-4" />
+                          </div>
+                        </div>
+                      ) : (
+                        <img src={photo.dataUrl} alt="Attachments Preview" className="h-full w-full object-cover" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-zinc-200 truncate">{photo.name}</p>
+                      <p className="text-[10px] text-zinc-500 font-mono">Salvo em anexo no e-mail</p>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-zinc-200 truncate">{photo.name}</p>
-                    <p className="text-[10px] text-zinc-500 font-mono">Salva em anexo no e-mail</p>
-                  </div>
-                </div>
-              )}
+                );
+              })()}
 
               <div>
                 <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-2">

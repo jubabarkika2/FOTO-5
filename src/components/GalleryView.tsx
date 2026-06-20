@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Image as ImageIcon, Trash2, Mail, ExternalLink, Calendar, HardDrive, Sparkles } from "lucide-react";
+import { Image as ImageIcon, Trash2, Mail, ExternalLink, Calendar, HardDrive, Sparkles, Video } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Photo } from "../types";
 
@@ -21,6 +21,16 @@ export default function GalleryView({ photos, isLoading, onDeletePhoto, onSelect
     if (kb < 1024) return `${kb.toFixed(1)} KB`;
     const mb = kb / 1024;
     return `${mb.toFixed(1)} MB`;
+  };
+
+  const checkIfVideo = (photo: Photo) => {
+    return !!(
+      photo.fileName?.endsWith(".webm") ||
+      photo.fileName?.endsWith(".mp4") ||
+      photo.dataUrl?.includes("video") ||
+      photo.name?.toLowerCase().includes("vídeo") ||
+      photo.name?.toLowerCase().includes("video")
+    );
   };
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
@@ -83,14 +93,30 @@ export default function GalleryView({ photos, isLoading, onDeletePhoto, onSelect
                 onClick={() => setSelectedPhoto(photo)}
                 className="group relative aspect-square rounded-2xl bg-zinc-900 border border-zinc-800 overflow-hidden cursor-pointer shadow-md hover:shadow-xl transition-all flex flex-col justify-end"
               >
-                {/* Photo Image layer */}
-                <img
-                  src={photo.dataUrl}
-                  alt={photo.name}
-                  referrerPolicy="no-referrer"
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  loading="lazy"
-                />
+                {/* Image or Video layer */}
+                {checkIfVideo(photo) ? (
+                  <div className="absolute inset-0 w-full h-full overflow-hidden bg-black flex items-center justify-center">
+                    <video
+                      src={photo.dataUrl}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-102"
+                      muted
+                      loop
+                      playsInline
+                      autoPlay
+                    />
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 p-2 rounded-full bg-black/60 border border-white/20 text-white z-10 transition-transform group-hover:scale-110">
+                      <Video className="w-4 h-4 fill-white/10" />
+                    </div>
+                  </div>
+                ) : (
+                  <img
+                    src={photo.dataUrl}
+                    alt={photo.name}
+                    referrerPolicy="no-referrer"
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    loading="lazy"
+                  />
+                )}
 
                 {/* Dark Vignette Overlay on Hover */}
                 <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/90 via-transparent to-transparent opacity-75 group-hover:opacity-90 transition-opacity" />
@@ -152,14 +178,24 @@ export default function GalleryView({ photos, isLoading, onDeletePhoto, onSelect
               onClick={(e) => e.stopPropagation()}
               className="bg-zinc-900 rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col md:flex-row border border-zinc-800"
             >
-              {/* Photo Side */}
-              <div id="gallery-modal-image-panel" className="relative flex-1 bg-black aspect-video md:aspect-auto flex items-center justify-center group">
-                <img
-                  src={selectedPhoto.dataUrl}
-                  alt={selectedPhoto.name}
-                  referrerPolicy="no-referrer"
-                  className="max-h-[70vh] md:max-h-[80vh] w-full object-contain"
-                />
+              {/* Photo or Video Side */}
+              <div id="gallery-modal-image-panel" className="relative flex-1 bg-black aspect-video md:aspect-auto flex items-center justify-center group min-h-[300px]">
+                {checkIfVideo(selectedPhoto) ? (
+                  <video
+                    src={selectedPhoto.dataUrl}
+                    controls
+                    autoPlay
+                    loop
+                    className="max-h-[70vh] md:max-h-[80vh] w-full object-contain"
+                  />
+                ) : (
+                  <img
+                    src={selectedPhoto.dataUrl}
+                    alt={selectedPhoto.name}
+                    referrerPolicy="no-referrer"
+                    className="max-h-[70vh] md:max-h-[80vh] w-full object-contain"
+                  />
+                )}
                 
                 {/* Visual Accent */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none md:hidden" />
@@ -171,7 +207,7 @@ export default function GalleryView({ photos, isLoading, onDeletePhoto, onSelect
                   <div className="flex items-start justify-between">
                     <div>
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-950/40 text-emerald-400 border border-emerald-900/50">
-                        <Sparkles className="w-3 h-3" /> Foto Registrada
+                        <Sparkles className="w-3 h-3" /> {checkIfVideo(selectedPhoto) ? "Vídeo Gravado" : "Foto Registrada"}
                       </span>
                       <h3 className="text-lg font-bold text-zinc-100 mt-2 tracking-tight break-all">
                         {selectedPhoto.name}
@@ -229,7 +265,7 @@ export default function GalleryView({ photos, isLoading, onDeletePhoto, onSelect
                     className="w-full py-2.5 px-4 bg-zinc-900 hover:bg-red-950/40 text-red-400 hover:text-red-300 font-medium rounded-2xl text-sm transition-all flex items-center justify-center gap-2 cursor-pointer border border-zinc-800 hover:border-red-950"
                   >
                     <Trash2 className="w-4 h-4" />
-                    Deletar Foto ok
+                    Deletar {checkIfVideo(selectedPhoto) ? "Vídeo" : "Foto"}
                   </button>
                 </div>
               </div>

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Camera, RefreshCw, AlertCircle, Sparkles, Check } from "lucide-react";
+import { Camera, RefreshCw, AlertCircle, Sparkles, Check, Video } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 interface CameraViewProps {
@@ -14,7 +14,15 @@ export default function CameraView({ onPhotoCaptured }: CameraViewProps) {
   const [showFlash, setShowFlash] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // Video recording states
+  const [mode, setMode] = useState<"photo" | "video">("photo");
+  const [isRecording, setIsRecording] = useState(false);
+  const [recTime, setRecTime] = useState(0);
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const recIntervalRef = useRef<any>(null);
 
   // Initialize and clean up stream
   useEffect(() => {
@@ -23,6 +31,14 @@ export default function CameraView({ onPhotoCaptured }: CameraViewProps) {
       stopCamera();
     };
   }, [facingMode]);
+
+  useEffect(() => {
+    return () => {
+      if (recIntervalRef.current) {
+        clearInterval(recIntervalRef.current);
+      }
+    };
+  }, []);
 
   async function startCamera() {
     setErrorMsg(null);
@@ -104,6 +120,67 @@ export default function CameraView({ onPhotoCaptured }: CameraViewProps) {
       console.error("Erro ao capturar foto:", err);
     } finally {
       setIsCapturing(false);
+    }
+  };
+
+  const startRecording = () => {
+    if (!stream) return;
+    chunksRef.current = [];
+    
+    try {
+      let mimeType = "video/webm;codecs=vp9";
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = "video/webm;codecs=vp8";
+      }
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = "video/webm";
+      }
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = "";
+      }
+
+      const options = mimeType ? { mimeType } : undefined;
+      const mediaRecorder = new MediaRecorder(stream, options);
+      
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          chunksRef.current.push(e.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: "video/webm" });
+        const reader = new FileReader();
+        reader.readAsDataURL(blob);
+        reader.onloadend = () => {
+          const base64Data = reader.result as string;
+          onPhotoCaptured({ dataUrl: base64Data });
+        };
+      };
+
+      mediaRecorderRef.current = mediaRecorder;
+      mediaRecorder.start(200);
+      setIsRecording(true);
+      setRecTime(0);
+
+      recIntervalRef.current = setInterval(() => {
+        setRecTime((prev) => prev + 1);
+      }, 1000);
+
+    } catch (err) {
+      console.error("Erro ao iniciar gravação de vídeo:", err);
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      
+      if (recIntervalRef.current) {
+        clearInterval(recIntervalRef.current);
+        recIntervalRef.current = null;
+      }
     }
   };
 
@@ -200,32 +277,89 @@ export default function CameraView({ onPhotoCaptured }: CameraViewProps) {
 
       {/* Floating Controls inside the viewfinder box */}
       {permissionState === "granted" && stream && (
-        <div className="absolute bottom-4 inset-x-0 flex items-center justify-between px-6 z-10 pointer-events-none">
-          {/* Switch Camera Button */}
-          <button
-            id="camera-toggle-lens-btn"
-            onClick={toggleFacingMode}
-            className="pointer-events-auto p-3 rounded-full bg-zinc-900/80 hover:bg-zinc-800 active:scale-90 text-white transition-all backdrop-blur-md cursor-pointer border border-white/10 hover:border-white/30"
-            title="Inverter Câmera (Frontal / Traseira)"
-          >
-            <RefreshCw className="w-5 h-5" />
-          </button>
+        <>
+          {/* Recording Time Overlay */}
+          {isRecording && (
+            <div className="absolute top-4 left-4 z-20 pointer-events-none flex items-center gap-2 bg-black/70 px-3 py-1.5 rounded-full border border-red-500/30 text-white font-mono text-xs select-none">
+              <div className="h-2.5 w-2.5 rounded-full bg-red-600 animate-ping" />
+              <span className="font-bold uppercase text-[10px] tracking-wider text-red-400">REC</span>
+              <span className="text-zinc-300 font-medium">
+                {Math.floor(recTime / 60).toString().padStart(2, "0")}:{(recTime % 60).toString().padStart(2, "0")}
+              </span>
+            </div>
+          )}
 
-          {/* Capture Trigger Button */}
-          <button
-            id="camera-shutter-btn"
-            disabled={isCapturing}
-            onClick={capturePhoto}
-            className="pointer-events-auto h-16 w-16 sm:h-20 sm:w-20 rounded-full border-4 border-white flex items-center justify-center p-1 bg-transparent hover:bg-white/10 transition-all cursor-pointer active:scale-95"
-          >
-            <div className="h-full w-full rounded-full bg-white shadow-md hover:scale-95 transition-transform" />
-          </button>
+          <div className="absolute bottom-4 inset-x-0 flex items-center justify-between px-6 z-10 pointer-events-none">
+            {/* Switch Camera Button */}
+            <button
+              id="camera-toggle-lens-btn"
+              onClick={toggleFacingMode}
+              className="pointer-events-auto p-3 rounded-full bg-zinc-900/80 hover:bg-zinc-800 active:scale-90 text-white transition-all backdrop-blur-md cursor-pointer border border-white/10 hover:border-white/30"
+              title="Inverter Câmera (Frontal / Traseira)"
+            >
+              <RefreshCw className="w-5 h-5" />
+            </button>
 
-          {/* Indicator Light */}
-          <div className="p-2.5 rounded-full bg-zinc-900/80 text-emerald-400 backdrop-blur-md border border-white/10">
-            <Sparkles className="w-5 h-5 animate-spin-slow" />
+            {/* Capture Trigger Button */}
+            {mode === "photo" ? (
+              <button
+                id="camera-shutter-btn"
+                disabled={isCapturing}
+                onClick={capturePhoto}
+                className="pointer-events-auto h-16 w-16 sm:h-20 sm:w-20 rounded-full border-4 border-white flex items-center justify-center p-1 bg-transparent hover:bg-white/10 transition-all cursor-pointer active:scale-95"
+                title="Tirar Foto"
+              >
+                <div className="h-full w-full rounded-full bg-white shadow-md hover:scale-95 transition-transform" />
+              </button>
+            ) : (
+              <button
+                id="camera-video-record-btn"
+                onClick={isRecording ? stopRecording : startRecording}
+                className="pointer-events-auto h-16 w-16 sm:h-20 sm:w-20 rounded-full border-4 border-white flex items-center justify-center p-1 bg-transparent hover:bg-white/10 transition-all cursor-pointer active:scale-95 relative"
+                title={isRecording ? "Parar Gravação" : "Gravar Vídeo"}
+              >
+                {isRecording ? (
+                  <div className="h-8 w-8 sm:h-10 sm:w-10 bg-red-600 rounded-lg shadow-md" />
+                ) : (
+                  <div className="h-full w-full rounded-full bg-red-600 shadow-md hover:scale-95 transition-transform animate-pulse" />
+                )}
+              </button>
+            )}
+
+            {/* Photo / Video Option - Right Side of Shutter Button */}
+            <div className="pointer-events-auto flex items-center bg-zinc-900/90 p-1 rounded-full border border-white/15 backdrop-blur-md select-none shadow-lg">
+              <button
+                id="camera-mode-photo-btn"
+                type="button"
+                onClick={() => {
+                  if (isRecording) stopRecording();
+                  setMode("photo");
+                }}
+                className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                  mode === "photo"
+                    ? "bg-emerald-500 text-zinc-950 font-extrabold shadow"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                Foto
+              </button>
+              <button
+                id="camera-mode-video-btn"
+                type="button"
+                onClick={() => {
+                  setMode("video");
+                }}
+                className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                  mode === "video"
+                    ? "bg-red-600 text-white font-extrabold shadow"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                Vídeo
+              </button>
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

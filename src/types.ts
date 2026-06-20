@@ -4,6 +4,7 @@ export interface Photo {
   createdAt: string;
   name: string;
   size?: number; // Size in bytes
+  fileName?: string;
 }
 
 export interface SMTPSettings {

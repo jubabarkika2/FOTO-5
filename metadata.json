@@ -1,0 +1,6 @@
+{
+  "name": "Câmera de Fotos e Envio de E-mail",
+  "description": "Tire fotos com a câmera do celular, salve em uma galeria no próprio app e envie para qualquer e-mail cadastrado usando o Gmail.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -12,11 +12,28 @@ export default function App() {
   const [emailPhoto, setEmailPhoto] = useState<Photo | null>(null);
   const [showEmailConfigModal, setShowEmailConfigModal] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ text: string; isError?: boolean } | null>(null);
+  const [sentPhotoIds, setSentPhotoIds] = useState<string[]>([]);
 
   // Load photos on start
   useEffect(() => {
     fetchPhotos();
+    fetchSentPhotoIds();
   }, []);
+
+  async function fetchSentPhotoIds() {
+    try {
+      const res = await fetch("/api/logs");
+      const json = await res.json();
+      if (json.success && json.logs) {
+        const ids = json.logs
+          .filter((log: any) => log.success && log.photoId)
+          .map((log: any) => log.photoId);
+        setSentPhotoIds(ids);
+      }
+    } catch (err) {
+      console.error("Erro ao buscar logs de e-mail:", err);
+    }
+  }
 
   async function fetchPhotos() {
     setIsLoading(true);
@@ -82,6 +99,75 @@ export default function App() {
     }
   };
 
+  const handleSelectSendEmail = async (photo: Photo) => {
+    const recipient = localStorage.getItem("photo_app_recipient") || "";
+    if (!recipient) {
+      showStatus("Destinatário não configurado! Abrindo janela para configurar...", false);
+      setEmailPhoto(photo);
+      setShowEmailConfigModal(true);
+      return;
+    }
+
+    showStatus(`Enviando por e-mail para ${recipient}...`, false);
+
+    const savedSmtp = localStorage.getItem("photo_app_smtp");
+    let smtpPayload = null;
+    if (savedSmtp) {
+      try {
+        const parsed = JSON.parse(savedSmtp);
+        if (parsed && parsed.user && parsed.pass) {
+          smtpPayload = parsed;
+        }
+      } catch (e) {
+        // use fallback/server smtp
+      }
+    }
+
+    const isVideo = !!(
+      photo.fileName?.endsWith(".webm") ||
+      photo.fileName?.endsWith(".mp4") ||
+      photo.dataUrl?.includes("video") ||
+      photo.name?.toLowerCase().includes("vídeo") ||
+      photo.name?.toLowerCase().includes("video")
+    );
+    const mediaType = isVideo ? "Vídeo" : "Foto";
+
+    const subject = `${mediaType} Enviado: ${photo.name}`;
+    const message = `Olá!\n\nSegue em anexo o ${mediaType.toLowerCase()} "${photo.name}" capturado pelo aplicativo.\n\nData de captura: ${new Date(photo.createdAt).toLocaleString("pt-BR")}\n\nEnviado através do aplicativo Camera & Email.`;
+
+    try {
+      const res = await fetch("/api/email/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          photoId: photo.id,
+          recipientEmail: recipient,
+          subject,
+          textMessage: message,
+          customSmtp: smtpPayload,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        showStatus(`E-mail com o ${mediaType.toLowerCase()} enviado com sucesso!`, false);
+        if (!sentPhotoIds.includes(photo.id)) {
+          setSentPhotoIds((prev) => [...prev, photo.id]);
+        }
+      } else {
+        console.error("Erro ao enviar e-mail:", data.error);
+        showStatus(`Falha no envio: ${data.error || "Erro de SMTP"}. Abrindo painel de ajuste...`, true);
+        setEmailPhoto(photo);
+        setShowEmailConfigModal(true);
+      }
+    } catch (e) {
+      console.error(e);
+      showStatus("Erro de conexão ao enviar e-mail. Abrindo painel...", true);
+      setEmailPhoto(photo);
+      setShowEmailConfigModal(true);
+    }
+  };
+
   // Status message manager
   function showStatus(text: string, isError = false) {
     setStatusMessage({ text, isError });
@@ -107,7 +193,7 @@ export default function App() {
             className="fixed top-5 inset-x-0 mx-auto w-fit z-50 px-4 py-2.5 rounded-full shadow-xl border text-xs max-w-sm font-medium flex items-center gap-2 bg-zinc-90 w bg-zinc-900 border-zinc-800 text-zinc-100"
           >
             <div className={`h-2 w-2 rounded-full ${statusMessage.isError ? "bg-red-500 animate-ping" : "bg-emerald-500 animate-pulse"}`} />
-            <span className={`${statusMessage.isError ? "text-red-450 text-red-400" : "text-emerald-400"}`}>
+            <span className={`${statusMessage.isError ? "text-red-400" : "text-white"}`}>
               {statusMessage.text}
             </span>
           </motion.div>
@@ -128,8 +214,11 @@ export default function App() {
             <button
               id="header-send-email-btn"
               onClick={() => {
-                setEmailPhoto(photos[0] || null);
-                setShowEmailConfigModal(true);
+                if (photos.length > 0) {
+                  handleSelectSendEmail(photos[0]);
+                } else {
+                  showStatus("Tire/grave uma foto ou vídeo primeiro para enviar!", true);
+                }
               }}
               className="px-3 py-2 sm:px-4 sm:py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold transition-all flex items-center gap-1.5 text-xs shadow-lg hover:shadow-emerald-500/20 active:scale-95 cursor-pointer"
             >
@@ -164,9 +253,9 @@ export default function App() {
             photos={photos}
             isLoading={isLoading}
             onDeletePhoto={handleDeletePhoto}
+            sentPhotoIds={sentPhotoIds}
             onSelectSendEmail={(photo) => {
-              setEmailPhoto(photo);
-              setShowEmailConfigModal(true);
+              handleSelectSendEmail(photo);
             }}
           />
         </section>
@@ -188,6 +277,11 @@ export default function App() {
             onClose={() => {
               setShowEmailConfigModal(false);
               setEmailPhoto(null);
+            }}
+            onEmailSuccess={(photoId) => {
+              if (!sentPhotoIds.includes(photoId)) {
+                setSentPhotoIds((prev) => [...prev, photoId]);
+              }
             }}
           />
         )}

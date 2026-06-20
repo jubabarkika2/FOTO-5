@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Image as ImageIcon, Trash2, Mail, ExternalLink, Calendar, HardDrive, Sparkles, Video } from "lucide-react";
+import { Image as ImageIcon, Trash2, Mail, ExternalLink, Calendar, HardDrive, Sparkles, Video, Check } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Photo } from "../types";
 
@@ -8,9 +8,10 @@ interface GalleryViewProps {
   isLoading: boolean;
   onDeletePhoto: (photoId: string) => Promise<void>;
   onSelectSendEmail: (photo: Photo) => void;
+  sentPhotoIds?: string[];
 }
 
-export default function GalleryView({ photos, isLoading, onDeletePhoto, onSelectSendEmail }: GalleryViewProps) {
+export default function GalleryView({ photos, isLoading, onDeletePhoto, onSelectSendEmail, sentPhotoIds = [] }: GalleryViewProps) {
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
 
@@ -121,6 +122,13 @@ export default function GalleryView({ photos, isLoading, onDeletePhoto, onSelect
                 {/* Dark Vignette Overlay on Hover */}
                 <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/90 via-transparent to-transparent opacity-75 group-hover:opacity-90 transition-opacity" />
 
+                {/* Sent indicator badge */}
+                {sentPhotoIds.includes(photo.id) && (
+                  <div className="absolute top-2.5 left-2.5 z-10 flex items-center justify-center bg-emerald-500 text-zinc-950 p-1 rounded-full shadow-md border border-emerald-450/20" title="E-mail Enviado">
+                    <Check className="w-3 h-3 stroke-[3]" />
+                  </div>
+                )}
+
                 {/* Action Buttons top right (appear on hover) */}
                 <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                   <button
@@ -147,7 +155,14 @@ export default function GalleryView({ photos, isLoading, onDeletePhoto, onSelect
 
                 {/* Bottom title info */}
                 <div className="relative p-3 text-left w-full select-none">
-                  <p className="text-white font-medium text-xs truncate max-w-[85%]">{photo.name}</p>
+                  <div className="flex items-center gap-1.5 justify-between">
+                    <p className="text-white font-medium text-xs truncate max-w-[85%]">{photo.name}</p>
+                    {sentPhotoIds.includes(photo.id) && (
+                      <span className="shrink-0 flex items-center justify-center h-3.5 w-3.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20" title="Enviado por E-mail">
+                        <Check className="w-2.5 h-2.5 stroke-[3.5]" />
+                      </span>
+                    )}
+                  </div>
                   <p className="text-zinc-400 font-mono text-[9px] mt-0.5">
                     {new Date(photo.createdAt).toLocaleDateString("pt-BR")}
                   </p>
@@ -209,6 +224,11 @@ export default function GalleryView({ photos, isLoading, onDeletePhoto, onSelect
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-950/40 text-emerald-400 border border-emerald-900/50">
                         <Sparkles className="w-3 h-3" /> {checkIfVideo(selectedPhoto) ? "Vídeo Gravado" : "Foto Registrada"}
                       </span>
+                      {sentPhotoIds.includes(selectedPhoto.id) && (
+                        <div className="mt-1.5 flex items-center gap-1 text-[11px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/15 w-fit px-2 py-0.5 rounded-full">
+                          <Check className="w-3 h-3 stroke-[3]" /> Enviado por E-mail
+                        </div>
+                      )}
                       <h3 className="text-lg font-bold text-zinc-100 mt-2 tracking-tight break-all">
                         {selectedPhoto.name}
                       </h3>

@@ -6,9 +6,10 @@ import { Photo, SMTPSettings, EmailLog } from "../types";
 interface EmailModalProps {
   photo: Photo | null;
   onClose: () => void;
+  onEmailSuccess?: (photoId: string) => void;
 }
 
-export default function EmailModal({ photo, onClose }: EmailModalProps) {
+export default function EmailModal({ photo, onClose, onEmailSuccess }: EmailModalProps) {
   const [activeTab, setActiveTab] = useState<"send" | "sender" | "history">("send");
   
   // Recipient setup (persisted in localStorage)
@@ -140,6 +141,9 @@ export default function EmailModal({ photo, onClose }: EmailModalProps) {
           message: `E-mail enviado com sucesso para ${recipient}!`,
         });
         fetchLogs();
+        if (photo) {
+          onEmailSuccess?.(photo.id);
+        }
       } else {
         setFeedback({
           type: "error",

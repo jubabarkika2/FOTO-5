@@ -185,7 +185,7 @@ export default function CameraView({ onPhotoCaptured }: CameraViewProps) {
   };
 
   return (
-    <div id="camera-container" className="relative w-full aspect-[4/3] sm:aspect-video rounded-3xl overflow-hidden bg-black border border-zinc-800 shadow-2xl flex flex-col justify-center items-center">
+    <div id="camera-container" className="relative w-full aspect-[2/3] sm:aspect-[8/9] md:max-h-[640px] rounded-3xl overflow-hidden bg-black border border-zinc-800 shadow-2xl flex flex-col justify-center items-center">
       {/* Live Stream Viewfinder */}
       {permissionState === "granted" && stream && (
         <video

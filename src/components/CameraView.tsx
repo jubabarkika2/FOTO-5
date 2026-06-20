@@ -152,9 +152,23 @@ export default function CameraView({ onPhotoCaptured }: CameraViewProps) {
       const video = videoRef.current;
       const canvas = document.createElement("canvas");
       
-      // Use the actual intrinsic video stream dimensions for maximum photograph clarity
-      canvas.width = video.videoWidth || 640;
-      canvas.height = video.videoHeight || 480;
+      // Scale down high-resolution images slightly to ensure fast and reliable network transmission while maintaining great clarity
+      let targetWidth = video.videoWidth || 640;
+      let targetHeight = video.videoHeight || 480;
+      const MAX_DIMENSION = 1600;
+      
+      if (targetWidth > MAX_DIMENSION || targetHeight > MAX_DIMENSION) {
+        if (targetWidth > targetHeight) {
+          targetHeight = Math.round((targetHeight * MAX_DIMENSION) / targetWidth);
+          targetWidth = MAX_DIMENSION;
+        } else {
+          targetWidth = Math.round((targetWidth * MAX_DIMENSION) / targetHeight);
+          targetHeight = MAX_DIMENSION;
+        }
+      }
+
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
 
       const ctx = canvas.getContext("2d");
       if (ctx) {
@@ -165,7 +179,8 @@ export default function CameraView({ onPhotoCaptured }: CameraViewProps) {
         }
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+        // Use 0.8 quality instead of 0.9 (virtually identical visually, but generates vastly smaller files)
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
         onPhotoCaptured({ dataUrl });
       }
     } catch (err) {

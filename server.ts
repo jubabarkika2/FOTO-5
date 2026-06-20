@@ -41,9 +41,9 @@ function writeDatabase(data: any) {
 const app = express();
 const PORT = 3000;
 
-// Increase payload limit to handle base64 image transmissions
-app.use(express.json({ limit: "20mb" }));
-app.use(express.urlencoded({ limit: "20mb", extended: true }));
+// Increase payload limit to handle base64 image transmissions smoothly
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 // Serve photos statically so the app can render them with regular links
 app.use("/api/static/photos", express.static(PHOTOS_DIR));

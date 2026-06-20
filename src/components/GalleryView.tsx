@@ -59,9 +59,6 @@ export default function GalleryView({ photos, isLoading, onDeletePhoto, onSelect
             Galeria Salva ({photos.length})
           </h2>
         </div>
-        <p className="text-xs text-zinc-500 font-mono">
-          Salvas no Servidor local
-        </p>
       </div>
 
       {isLoading ? (

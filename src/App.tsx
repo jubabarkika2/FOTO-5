@@ -120,6 +120,20 @@ export default function App() {
     }
   };
 
+  const handleAutoDeleteAfterSend = async (photoId: string) => {
+    try {
+      const res = await fetch(`/api/photos/${photoId}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (json.success) {
+        setPhotos((prev) => prev.filter((p) => p.id !== photoId));
+      }
+    } catch (err) {
+      console.error("Erro ao deletar foto automaticamente após o envio:", err);
+    }
+  };
+
   const handleSelectSendEmail = async (photo: Photo) => {
     const recipient = localStorage.getItem("photo_app_recipient") || "";
     if (!recipient) {
@@ -171,10 +185,11 @@ export default function App() {
 
       const data = await res.json();
       if (data.success) {
-        showStatus(`E-mail com o ${mediaType.toLowerCase()} enviado com sucesso!`, false);
+        showStatus(`E-mail com o ${mediaType.toLowerCase()} enviado com sucesso e removido da galeria!`, false);
         if (!sentPhotoIds.includes(photo.id)) {
           setSentPhotoIds((prev) => [...prev, photo.id]);
         }
+        await handleAutoDeleteAfterSend(photo.id);
       } else {
         console.error("Erro ao enviar e-mail:", data.error);
         showStatus(`Falha no envio: ${data.error || "Erro de SMTP"}. Abrindo painel de ajuste...`, true);
@@ -299,10 +314,11 @@ export default function App() {
               setShowEmailConfigModal(false);
               setEmailPhoto(null);
             }}
-            onEmailSuccess={(photoId) => {
+            onEmailSuccess={async (photoId) => {
               if (!sentPhotoIds.includes(photoId)) {
                 setSentPhotoIds((prev) => [...prev, photoId]);
               }
+              await handleAutoDeleteAfterSend(photoId);
             }}
           />
         )}

@@ -67,7 +67,28 @@ export default function App() {
         }),
       });
 
-      const json = await res.json();
+      if (!res.ok) {
+        let errMsg = `Erro no servidor (Status ${res.status})`;
+        try {
+          const text = await res.text();
+          if (text.includes("Too Large") || res.status === 413) {
+            errMsg = "A imagem é muito grande para esta rede.";
+          } else if (text.includes("Gateway") || res.status >= 502) {
+            errMsg = "Servidor temporariamente indisponível. Tente novamente.";
+          }
+        } catch (_) {}
+        showStatus(errMsg, true);
+        return;
+      }
+
+      let json;
+      try {
+        json = await res.json();
+      } catch (jsonErr) {
+        showStatus("Resposta do servidor inválida ao salvar foto.", true);
+        return;
+      }
+
       if (json.success) {
         // Soft refresh gallery
         setPhotos((prev) => [json.photo, ...prev]);

@@ -117,24 +117,25 @@ export default function App() {
       <main className="max-w-screen-2xl mx-auto w-full px-2 sm:px-6 md:px-8 pt-4 sm:pt-6 pb-12 flex flex-col gap-6 md:gap-8">
         
         {/* Brand Header */}
-        <header id="app-header" className="flex flex-col md:flex-row md:items-center justify-between gap-4 text-left border-b border-zinc-850 border-zinc-800 pb-5">
-          <div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-white mt-2">
-              Câmera <span className="text-emerald-500 font-light">&</span> Envio de E-mails
+        <header id="app-header" className="flex items-center justify-between gap-3 text-left border-b border-zinc-850 border-zinc-800 pb-5">
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
+              Cam<span className="text-emerald-500 font-light">&</span>Email
             </h1>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0 select-none">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 select-none">
             <button
               id="header-send-email-btn"
               onClick={() => {
                 setEmailPhoto(photos[0] || null);
                 setShowEmailConfigModal(true);
               }}
-              className="px-4 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold transition-all flex items-center gap-1.5 text-xs shadow-lg hover:shadow-emerald-500/20 active:scale-95 cursor-pointer"
+              className="px-3 py-2 sm:px-4 sm:py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold transition-all flex items-center gap-1.5 text-xs shadow-lg hover:shadow-emerald-500/20 active:scale-95 cursor-pointer"
             >
               <Mail className="w-4 h-4 text-zinc-950" />
-              Enviar por E-mail
+              <span className="hidden sm:inline">Enviar por E-mail</span>
+              <span className="sm:hidden">Enviar</span>
             </button>
             <button
               id="header-smtp-btn"
@@ -142,10 +143,11 @@ export default function App() {
                 setEmailPhoto(photos[0] || null); // fallback to pass some photo context
                 setShowEmailConfigModal(true);
               }}
-              className="p-3 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-zinc-305 text-zinc-300 hover:text-white transition-all border border-zinc-800 hover:border-zinc-700 flex items-center gap-1.5 text-xs font-semibold shadow-md cursor-pointer"
+              className="p-2 sm:p-3 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white transition-all border border-zinc-800 hover:border-zinc-700 flex items-center gap-1.5 text-xs font-semibold shadow-md cursor-pointer"
             >
               <Sliders className="w-4 h-4 text-zinc-400" />
-              Configurar SMTP
+              <span className="hidden sm:inline">Configurações</span>
+              <span className="sm:hidden">Config</span>
             </button>
           </div>
         </header>

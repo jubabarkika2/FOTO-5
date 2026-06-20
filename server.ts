@@ -192,6 +192,8 @@ app.post("/api/email/send", async (req, res) => {
           user: customSmtp.user,
           pass: customSmtp.pass,
         },
+        logger: true,
+        debug: true,
       };
       console.log(`Sending email using Custom SMTP [${customSmtp.user}@${customSmtp.host}]`);
     } else {
@@ -217,6 +219,8 @@ app.post("/api/email/send", async (req, res) => {
           user: envUser,
           pass: envPass,
         },
+        logger: true,
+        debug: true,
       };
       console.log(`Sending email using Global ENV SMTP [${envUser}]`);
     }

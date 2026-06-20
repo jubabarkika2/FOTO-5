@@ -32,6 +32,20 @@ export default function CameraView({ onPhotoCaptured }: CameraViewProps) {
     };
   }, [facingMode]);
 
+  // Safely bind stream to the video element after it has mounted
+  useEffect(() => {
+    if (stream && videoRef.current) {
+      try {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play().catch((playErr) => {
+          console.warn("Retrying play on user interaction or next frame:", playErr);
+        });
+      } catch (err) {
+        console.error("Error setting video srcObject:", err);
+      }
+    }
+  }, [stream]);
+
   useEffect(() => {
     return () => {
       if (recIntervalRef.current) {
@@ -44,32 +58,70 @@ export default function CameraView({ onPhotoCaptured }: CameraViewProps) {
     setErrorMsg(null);
     stopCamera();
 
-    const constraints = {
-      video: {
-        facingMode: facingMode,
-        width: { ideal: 1920 },
-        height: { ideal: 1080 }
+    // Cascaded constraints to maximize device and browser compatibility (PC, iOS, Android, etc.)
+    const constraintsSet = [
+      {
+        video: {
+          facingMode: facingMode,
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        },
+        audio: false,
       },
-      audio: false,
-    };
-
-    try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
-      setStream(mediaStream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
+      {
+        video: {
+          facingMode: facingMode,
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: false,
+      },
+      {
+        video: {
+          facingMode: facingMode,
+        },
+        audio: false,
+      },
+      {
+        video: true,
+        audio: false,
       }
+    ];
+
+    let mediaStream: MediaStream | null = null;
+    let lastError: any = null;
+
+    for (const constraints of constraintsSet) {
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+        if (mediaStream) break;
+      } catch (err: any) {
+        console.warn(`getUserMedia attempt failed with constraints:`, constraints, err);
+        lastError = err;
+      }
+    }
+
+    if (mediaStream) {
+      setStream(mediaStream);
       setPermissionState("granted");
-    } catch (err: any) {
-      console.error("Erro ao acessar a câmera:", err);
+    }
+
+    if (!mediaStream) {
+      console.error("Erro ao acessar a câmera no dispositivo:", lastError);
       setPermissionState("denied");
 
-      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
-        setErrorMsg("Permissão da câmera negada. Ative as permissões nas configurações do navegador.");
-      } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
-        setErrorMsg("Nenhuma câmera encontrada no dispositivo.");
+      if (lastError) {
+        if (lastError.name === "NotAllowedError" || lastError.name === "PermissionDeniedError") {
+          setErrorMsg("Permissão da câmera negada. Ative as permissões nas configurações do navegador ou do celular.");
+        } else if (lastError.name === "NotFoundError" || lastError.name === "DevicesNotFoundError") {
+          setErrorMsg("Nenhuma câmera encontrada no seu dispositivo.");
+        } else if (lastError.name === "NotReadableError" || lastError.name === "TrackStartError") {
+          setErrorMsg("A câmera já está em uso por outro aplicativo ou aba do navegador.");
+        } else {
+          setErrorMsg(`Não foi possível iniciar a câmera: ${lastError.message || "Erro desconhecido"}`);
+        }
       } else {
-        setErrorMsg(`Não foi possível iniciar a câmera: ${err.message || "Erro desconhecido"}`);
+        setErrorMsg("Não foi possível acessar a câmera do dispositivo.");
       }
     }
   }
